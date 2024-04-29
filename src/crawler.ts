@@ -114,7 +114,7 @@ export class Crawler {
       }
       if (translatedTitle) {
         // 翻訳されたタイトルがある場合は、説明文の先頭に表示する
-        embed.description = translatedTitle + '\n\n' + embed.description
+        embed.description = translatedTitle + '\n\n' + (embed.description ?? '')
       }
       if (translatedText) {
         // 翻訳されたテキストがある場合は、フィールドに表示する
