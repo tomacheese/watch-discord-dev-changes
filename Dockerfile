@@ -23,8 +23,8 @@ COPY src src
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --offline
 
-ENV NODE_ENV production
-ENV CONFIG_PATH /data/config.json
-ENV NOTIFIED_PATH /data/notified.json
+ENV NODE_ENV=production
+ENV CONFIG_PATH=/data/config.json
+ENV NOTIFIED_PATH=/data/notified.json
 
 ENTRYPOINT [ "pnpm", "start" ]
