@@ -27,7 +27,7 @@
     "lint": "run-z lint:prettier,lint:eslint,lint:tsc"
   },
   "devDependencies": {
-    "@book000/eslint-config": "1.8.18",
+    "@book000/eslint-config": "1.8.20",
     "@book000/node-utils": "1.14.19",
     "@types/jest": "29.5.14",
     "@types/node": "22.13.9",
