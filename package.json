@@ -30,7 +30,7 @@
     "@book000/eslint-config": "1.8.39",
     "@book000/node-utils": "1.14.58",
     "@types/jest": "29.5.14",
-    "@types/node": "22.13.17",
+    "@types/node": "22.14.0",
     "axios": "1.8.4",
     "date-fns": "4.1.0",
     "eslint": "9.23.0",
