@@ -33,7 +33,7 @@
     "@types/node": "24.3.0",
     "axios": "1.11.0",
     "date-fns": "4.1.0",
-    "eslint": "9.33.0",
+    "eslint": "9.34.0",
     "eslint-config-standard": "17.1.0",
     "eslint-plugin-import": "2.32.0",
     "eslint-plugin-n": "17.21.3",
