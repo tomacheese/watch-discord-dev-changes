@@ -65,4 +65,4 @@ docker compose up -d
 
 ## ライセンス
 
-このプロジェクトは [MIT](https://opensource.org/licenses/MIT) ライセンスの下で公開されています。
+このプロジェクトは [MIT](LICENSE) ライセンスの下で公開されています。
