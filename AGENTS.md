@@ -25,3 +25,4 @@
 - ログに機密情報を出力しない。
 
 ## リポジトリ固有
+- 目的: 🔔 Discord の Developer Change Log が更新されたら Discord チャンネルに通知するツールです。

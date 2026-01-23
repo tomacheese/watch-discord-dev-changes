@@ -36,3 +36,4 @@ pnpm install
 - 既存のプロジェクトルールがある場合はそれを優先する。
 
 ## リポジトリ固有
+- 目的: 🔔 Discord の Developer Change Log が更新されたら Discord チャンネルに通知するツールです。
