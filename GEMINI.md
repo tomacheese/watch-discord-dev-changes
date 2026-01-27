@@ -15,7 +15,7 @@ Gemini CLI 向けのコンテキストと作業方針を定義します。
 
 ## プロジェクト概要
 - Discord Developer Change Log を監視し、更新を Discord に通知するツール。
-- 技術スタック: TypeScript, Node.js, pnpm, axios, Jest.
+- 技術スタック: TypeScript, Node.js, pnpm, axios, Jest
 
 ## コーディング規約
 - 日本語での JSDoc 記載。

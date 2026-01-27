@@ -53,7 +53,7 @@ pnpm fix
 - 方針: ユーティリティ関数（`utils.ts`）を中心にユニットテストを作成する。
 
 ## セキュリティ / 機密情報
-- `data/config.json` や `.env` に含まれる API キーや Webhook URL を Git にコミットしない。
+- `data/config.json` や環境変数に含まれる API キーや Webhook URL を Git にコミットしない。
 - ログに機密情報を出力しない。
 
 ## ドキュメント更新
