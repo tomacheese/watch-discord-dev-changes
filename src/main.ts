@@ -22,8 +22,8 @@ async function main() {
 ;(async () => {
   try {
     await main()
-  } catch (error) {
-    Logger.configure('main').error('Error', error as Error)
+  } catch (err) {
+    Logger.configure('main').error('Error', err as Error)
     // eslint-disable-next-line unicorn/no-process-exit
     process.exit(1)
   }

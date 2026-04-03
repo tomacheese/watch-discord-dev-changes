@@ -38,11 +38,11 @@ export class Crawler {
       })) {
         await this.run()
       }
-    } catch (error) {
-      if ((error as Error).name === 'AbortError') {
+    } catch (err) {
+      if ((err as Error).name === 'AbortError') {
         return
       }
-      throw error
+      throw err
     }
   }
 
