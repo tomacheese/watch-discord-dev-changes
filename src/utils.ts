@@ -1,5 +1,4 @@
 import { Logger } from '@book000/node-utils'
-import axios from 'axios'
 
 interface GasTranslateResponse {
   response: {
@@ -124,30 +123,33 @@ export const Utils = {
   ): Promise<string | null> {
     const logger = Logger.configure('Utils.translate')
 
-    // Google Apps Scriptサービスに翻訳リクエストを送信
-    const response = await axios.post<GasTranslateResponse>(
-      gasUrl,
-      {
-        before,
-        after,
-        text: message,
-        mode: 'html',
-      },
-      {
+    try {
+      const res = await fetch(gasUrl, {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-Requested-With': 'XMLHttpRequest',
         },
-      }
-    )
+        body: JSON.stringify({
+          before,
+          after,
+          text: message,
+          mode: 'html',
+        }),
+      })
 
-    // レスポンスのステータスに応じて、翻訳が成功したかどうかを確認
-    if (response.status !== 200) {
-      logger.warn(`❌ メッセージの翻訳に失敗しました：${response.status}`)
+      if (!res.ok) {
+        logger.warn(`❌ メッセージの翻訳に失敗しました：${res.status}`)
+        return null
+      }
+
+      const data = (await res.json()) as GasTranslateResponse
+      return data.response.result
+    } catch (error) {
+      logger.warn(
+        `❌ メッセージの翻訳中に例外が発生しました：${(error as Error).message}`
+      )
       return null
     }
-
-    // レスポンスから翻訳されたメッセージを返す
-    return response.data.response.result
   },
 }

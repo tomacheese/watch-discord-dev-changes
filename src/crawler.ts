@@ -1,6 +1,5 @@
 import { Configuration } from './config'
 import { setInterval } from 'node:timers/promises'
-import axios from 'axios'
 import { Notified } from './notified'
 import { Utils } from './utils'
 import { Discord, DiscordEmbed, Logger } from '@book000/node-utils'
@@ -54,14 +53,18 @@ export class Crawler {
     const logger = Logger.configure('Crawler.run')
     logger.info('🔍 Fetching changelog')
 
-    const response = await axios.get<string>(this.url, {
-      validateStatus: () => true,
-    })
-    if (response.status !== 200) {
-      logger.error(`❌ Failed to fetch changelog: ${response.status}`)
+    let res: Response
+    try {
+      res = await fetch(this.url)
+    } catch (error) {
+      logger.error(`❌ Failed to fetch changelog: ${(error as Error).message}`)
       return
     }
-    const body = response.data
+    if (!res.ok) {
+      logger.error(`❌ Failed to fetch changelog: ${res.status}`)
+      return
+    }
+    const body = await res.text()
     if (!body) {
       logger.error('❌ Failed to fetch changelog')
       return
