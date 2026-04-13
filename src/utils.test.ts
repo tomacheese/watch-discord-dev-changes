@@ -114,6 +114,8 @@ describe('Utils', () => {
   })
 
   describe('translate', () => {
+    afterEach(() => jest.restoreAllMocks())
+
     it('should translate text using the specified GAS URL', async () => {
       const gasUrl = 'https://example.com/translate'
       const message = 'Hello, world!'

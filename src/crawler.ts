@@ -53,7 +53,13 @@ export class Crawler {
     const logger = Logger.configure('Crawler.run')
     logger.info('🔍 Fetching changelog')
 
-    const res = await fetch(this.url)
+    let res: Response
+    try {
+      res = await fetch(this.url)
+    } catch (error) {
+      logger.error(`❌ Failed to fetch changelog: ${(error as Error).message}`)
+      return
+    }
     if (!res.ok) {
       logger.error(`❌ Failed to fetch changelog: ${res.status}`)
       return

@@ -123,26 +123,33 @@ export const Utils = {
   ): Promise<string | null> {
     const logger = Logger.configure('Utils.translate')
 
-    const res = await fetch(gasUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest',
-      },
-      body: JSON.stringify({
-        before,
-        after,
-        text: message,
-        mode: 'html',
-      }),
-    })
+    try {
+      const res = await fetch(gasUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+        body: JSON.stringify({
+          before,
+          after,
+          text: message,
+          mode: 'html',
+        }),
+      })
 
-    if (!res.ok) {
-      logger.warn(`❌ メッセージの翻訳に失敗しました：${res.status}`)
+      if (!res.ok) {
+        logger.warn(`❌ メッセージの翻訳に失敗しました：${res.status}`)
+        return null
+      }
+
+      const data = (await res.json()) as GasTranslateResponse
+      return data.response.result
+    } catch (error) {
+      logger.warn(
+        `❌ メッセージの翻訳中に例外が発生しました：${(error as Error).message}`
+      )
       return null
     }
-
-    const data = (await res.json()) as GasTranslateResponse
-    return data.response.result
   },
 }
