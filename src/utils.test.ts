@@ -1,5 +1,4 @@
 import { Utils } from './utils'
-import axios from 'axios'
 
 describe('Utils', () => {
   describe('escape', () => {
@@ -120,15 +119,12 @@ describe('Utils', () => {
       const message = 'Hello, world!'
       const translatedMessage = 'こんにちは、世界！'
 
-      // Mock the axios.post method to return the translated message
-      jest.spyOn(axios, 'post').mockResolvedValueOnce({
-        status: 200,
-        data: {
-          response: {
-            result: translatedMessage,
-          },
-        },
-      })
+      // Mock the fetch method to return the translated message
+      jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({ response: { result: translatedMessage } }),
+      } as unknown as Response)
 
       const result = await Utils.translate(gasUrl, message)
       expect(result).toBe(translatedMessage)
@@ -138,10 +134,11 @@ describe('Utils', () => {
       const gasUrl = 'https://example.com/translate'
       const message = 'Hello, world!'
 
-      // Mock the axios.post method to return an error response
-      jest.spyOn(axios, 'post').mockResolvedValueOnce({
+      // Mock the fetch method to return an error response
+      jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: false,
         status: 500,
-      })
+      } as unknown as Response)
 
       const result = await Utils.translate(gasUrl, message)
       expect(result).toBeNull()
