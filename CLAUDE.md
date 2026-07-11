@@ -1,91 +1,78 @@
 # CLAUDE.md
 
-## 目的
-このファイルは、Claude Code の作業方針とプロジェクト固有のルールを示します。
-
-## 判断記録のルール
-判断を行った場合は、以下の項目を記録に残してください。
-1. 判断内容の要約
-2. 検討した代替案
-3. 採用しなかった案とその理由
-4. 前提条件・仮定・不確実性
-5. 他エージェントによるレビュー可否
+Claude Code の作業方針とプロジェクト固有ルールを示します。
 
 ## プロジェクト概要
-- 目的: Discord Developer Change Log を監視し、更新を Discord に通知する
-- 主な機能: 変更ログの取得、新規検知、Discord 通知、永続化
 
-## 重要ルール
-- 会話と言語: 日本語
-- コミットメッセージ: Conventional Commits（説明は日本語）
-- コード内コメント: 日本語（JSDoc 形式を推奨）
-- エラーメッセージ: 英語
-- 日本語と英数字の間には半角スペースを挿入
+Discord の [Developer Change Log](https://discord.com/developers/docs/change-log) を定期監視し、新しい変更ログを検知して Discord に通知するツールです。監視対象は Change Log の Markdown ソース、通知先は Webhook または Bot Token 経由の Discord チャンネルです。通知済みログを永続化して重複通知を防ぎます。
 
-## 環境のルール
-- ブランチ命名: Conventional Branch (`feat/`, `fix/`)
-- GitHub リポジトリ調査: 調査が必要な場合は一時ディレクトリにクローンして検索する
-- Renovate: Renovate が作成した PR には直接コミット・更新を行わない
+## 言語・スタイル
 
-## Git Worktree
-Git Worktree を使用する場合は以下の構成とする：
-```text
-.bare/
-<ブランチ名>/
-```
-
-## コード改修時のルール
-- エラーメッセージの先頭に絵文字がある場合は、全体で絵文字を統一する
-- TypeScript の `skipLibCheck` の有効化による回避は禁止
-- 関数・インターフェースには日本語で docstring を記載する
-
-## 相談ルール
-- Codex CLI: 実装レビュー、局所設計、整合性確認
-- Gemini CLI: 外部仕様、最新情報確認
-- 指摘への対応: 信頼度スコア 50 以上の指摘には必ず対応する
+- 会話・ドキュメント: 日本語
+- コード内コメント・JSDoc: 日本語
+- エラーメッセージ・ログ出力: 英語
+- 日本語と英数字の間には半角スペースを挿入する
 
 ## 開発コマンド
+
 ```bash
 pnpm install  # 依存関係インストール
-pnpm dev      # 開発実行（ウォッチ）
-pnpm start    # 実行
-pnpm test     # テスト
-pnpm lint     # Lint チェック
-pnpm fix      # 自動修正
+pnpm dev      # 開発実行（tsx watch）
+pnpm start    # 実行（tsx）
+pnpm test     # テスト（Jest）
+pnpm lint     # Lint（prettier + eslint + tsc）
+pnpm fix      # 自動修正（prettier + eslint）
 ```
 
+Node.js のバージョンは `.node-version` に従う。
+
 ## アーキテクチャと主要ファイル
-- `src/main.ts`: エントリーポイント。全体のフロー制御
-- `src/config.ts`: 設定管理（`@book000/node-utils` を使用）
-- `src/crawler.ts`: Discord Developer Change Log のスクレイピング
-- `src/notified.ts`: 通知済みログの永続化管理
-- `src/utils.ts`: ユーティリティ関数
+
+- `src/main.ts`: エントリーポイント。設定を読み込み `Crawler` を起動する
+- `src/config.ts`: 設定管理。`@book000/node-utils` の `ConfigFramework` で `data/config.json` を読み込む
+- `src/crawler.ts`: Change Log を native `fetch` で取得し、`date-fns` で日付をパースして差分を検知、`Discord` クラスで通知する
+- `src/notified.ts`: 通知済みログの永続化。既定パスは `data/notified.json`（環境変数 `NOTIFIED_PATH` で上書き可能）
+- `src/utils.ts`: ユーティリティ関数（`utils.test.ts` で単体テスト対象）
+
+## コーディング規約
+
+- 命名: 変数・関数はキャメルケース、クラス・インターフェースはパスカルケース
+- 関数・インターフェースには日本語で JSDoc を記載する
+- TypeScript の `skipLibCheck` 有効化による型エラー回避は禁止。型定義を正しく扱う
+- HTTP 取得や Discord 通知など、`@book000/node-utils` が提供する機能は自前実装せず優先利用する
+- エラーメッセージ先頭に絵文字を使う場合は全体で統一する（既存コードは `❌` を使用）
 
 ## テスト
-- テストフレームワーク: Jest
-- 方針: 新規ユーティリティ関数追加時は必ずテストを追加する
+
+- フレームワーク: Jest（`*.test.ts` を対象、`ts-jest` で実行）
+- 新規のユーティリティ関数を追加する際は必ず対応するテストを追加する
+
+## セキュリティ・機密情報
+
+- Discord の Webhook URL・Bot Token などの認証情報をコードやコミットに含めない
+- `data/config.json` および環境変数の認証情報を Git にコミットしない
+- ログに機密情報を出力しない
+
+## 実行環境・リポジトリ固有
+
+- `data/` 配下（`config.json`, `notified.json`）は実行時に生成・参照される。設定例は `README.md` を参照
+- Docker で動作させる場合は `Dockerfile` / `compose.yaml` を使用する。変更時は両者への影響を考慮する
+- Renovate が作成した PR には直接コミット・更新を行わない
+
+## 判断記録のルール
+
+重要な設計判断を行った場合は、判断内容の要約・検討した代替案・不採用の理由・前提条件を記録に残す。
 
 ## ドキュメント更新ルール
-- コード変更に伴い、README.md や関連するプロンプトファイルを更新する
 
-## 作業チェックリスト
+コード変更に伴い、影響する以下を更新する。
 
-### 新規改修時
-1. プロジェクトを理解する
-2. 適切なブランチ（最新のリモートに基づく）で作業する
-3. 依存関係をインストールする
+- `README.md`（機能・設定・使い方の変更時）
+- `CLAUDE.md`（コマンド・アーキテクチャ・規約の変更時）
+- `.github/copilot-instructions.md`（レビュー観点に影響する規約の変更時）
 
-### コミット・プッシュ前
-1. Conventional Commits に従っているか確認（説明は日本語）
-2. センシティブな情報（Webhook URL 等）が含まれていないか確認
-3. Lint / Format エラーがないか確認
-4. 動作確認（テスト実行含む）を行う
+## コミット規約
 
-### PR 作成前
-1. ユーザーからの依頼があるか確認
-2. コンフリクトの恐れがないか確認
-
-### PR 作成後
-1. PR 本文を日本語で最新の状態に更新する
-2. CI の成功を確認する
-3. レビュー指摘に対応する
+- [Conventional Commits](https://www.conventionalcommits.org/) に従う（`<type>(<scope>): <description>`）
+- description は日本語で記載する
+- ブランチ命名は [Conventional Branch](https://conventional-branch.github.io) の短縮形（`feat/`, `fix/` 等）
