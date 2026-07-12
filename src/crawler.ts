@@ -1,7 +1,7 @@
-import { Configuration } from './config'
+import { Config } from './config'
 import { setInterval } from 'node:timers/promises'
 import { Notified } from './notified'
-import { Utils } from './utils'
+import { Utilities } from './utilities'
 import { Discord, DiscordEmbed, Logger } from '@book000/node-utils'
 import { parse, isValid } from 'date-fns'
 
@@ -20,10 +20,10 @@ export class Crawler {
   // Oct 19, 2023
   private readonly dateFormat = 'MMM d, yyyy'
 
-  private config: Configuration
+  private config: Config
   private readonly controller: AbortController = new AbortController()
 
-  constructor(config: Configuration) {
+  constructor(config: Config) {
     this.config = config
   }
 
@@ -31,10 +31,11 @@ export class Crawler {
     try {
       await this.run()
 
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      for await (const _ of setInterval(1000 * 60 * 60, null, {
+      const interval = setInterval(1000 * 60 * 60, null, {
         signal: this.controller.signal,
-      })) {
+      })
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      for await (const _ of interval) {
         await this.run()
       }
     } catch (error) {
@@ -53,18 +54,18 @@ export class Crawler {
     const logger = Logger.configure('Crawler.run')
     logger.info('🔍 Fetching changelog')
 
-    let res: Response
+    let response: Response
     try {
-      res = await fetch(this.url)
+      response = await fetch(this.url)
     } catch (error) {
       logger.error(`❌ Failed to fetch changelog: ${(error as Error).message}`)
       return
     }
-    if (!res.ok) {
-      logger.error(`❌ Failed to fetch changelog: ${res.status}`)
+    if (!response.ok) {
+      logger.error(`❌ Failed to fetch changelog: ${response.status}`)
       return
     }
-    const body = await res.text()
+    const body = await response.text()
     if (!body) {
       logger.error('❌ Failed to fetch changelog')
       return
@@ -209,12 +210,12 @@ export class Crawler {
       return null
     }
 
-    const escapedText = Utils.escape(text)
-    const translatedText = await Utils.translate(gasUrl, escapedText)
+    const escapedText = Utilities.escape(text)
+    const translatedText = await Utilities.translate(gasUrl, escapedText)
     if (!translatedText) {
       return null
     }
-    const unescapedText = Utils.unescape(translatedText)
+    const unescapedText = Utilities.unescape(translatedText)
     return unescapedText
   }
 

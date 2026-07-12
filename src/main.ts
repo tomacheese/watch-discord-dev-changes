@@ -1,10 +1,10 @@
 import { Logger } from '@book000/node-utils'
-import { Configuration } from './config'
+import { Config } from './config'
 import { Crawler } from './crawler'
 
 async function main() {
   const logger = Logger.configure('main')
-  const config = new Configuration('data/config.json')
+  const config = new Config('data/config.json')
   config.load()
   if (!config.validate()) {
     logger.error('❌ Configuration is invalid')
