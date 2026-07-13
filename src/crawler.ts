@@ -31,10 +31,11 @@ export class Crawler {
     try {
       await this.run()
 
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      for await (const _ of setInterval(1000 * 60 * 60, null, {
+      const interval = setInterval(1000 * 60 * 60, null, {
         signal: this.controller.signal,
-      })) {
+      })
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      for await (const _ of interval) {
         await this.run()
       }
     } catch (error) {
