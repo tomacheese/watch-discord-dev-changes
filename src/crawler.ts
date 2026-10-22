@@ -7,7 +7,7 @@ import { Discord, DiscordEmbed, Logger } from '@book000/node-utils'
 
 /**
  * これより古い項目は通知せず、通知済みとして記録だけする。
- * 旧取得元の停止期間に溜まった項目が、切替時にまとめて通知されるのを防ぐ。
+ * 通知済みデータに無い古い項目が、まとめて通知されるのを防ぐ。
  */
 const MAX_NOTIFY_AGE_DAYS = 30
 const MAX_NOTIFY_AGE_MS = MAX_NOTIFY_AGE_DAYS * 24 * 60 * 60 * 1000

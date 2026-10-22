@@ -27,7 +27,7 @@ const TITLE_PATTERN = /^[ \t]*## (.+)$/
  * 行頭の空白文字数を返す。
  *
  * @param line 対象の行
- * @returns 行頭の空白 (半角スペースとタブ) の文字数
+ * @returns 行頭の空白文字の文字数
  */
 function countIndent(line: string): number {
   return line.length - line.trimStart().length
@@ -40,11 +40,14 @@ function countIndent(line: string): number {
  * @returns 共通インデントを取り除いた行
  */
 function dedent(lines: string[]): string[] {
-  const indents = lines
-    .filter((line) => line.trim() !== '')
-    .map((line) => countIndent(line))
-  const minIndent = indents.length > 0 ? Math.min(...indents) : 0
-  return lines.map((line) => line.slice(minIndent))
+  let minIndent = Infinity
+  for (const line of lines) {
+    if (line.trim() !== '') {
+      minIndent = Math.min(minIndent, countIndent(line))
+    }
+  }
+  const indent = Number.isFinite(minIndent) ? minIndent : 0
+  return lines.map((line) => line.slice(indent))
 }
 
 /**
@@ -90,6 +93,7 @@ function parseLabelDate(label: string): Date | null {
  *
  * `<Update label="...">` から `</Update>` までを 1 項目とし、本文の最初の h2 をタイトルにする。
  * タイトルが無い項目や `label` が空の項目は警告ログを出してスキップする。
+ * 閉じタグの無い項目に当たった場合は警告ログを出し、それ以降の解析を打ち切る。
  *
  * @param body Change Log の MDX 全文
  * @returns 項目の配列 (MDX 上の出現順)
