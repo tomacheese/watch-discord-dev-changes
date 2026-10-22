@@ -8,6 +8,10 @@
 - 新しい変更ログが追加されたら Discord に通知
 - 既に通知した変更ログの重複通知を防止
 
+監視対象は [discord/discord-api-docs](https://github.com/discord/discord-api-docs) の `main` ブランチにある `developers/change-log.mdx` です。通知済みの管理にはタイトルを使います。
+
+取得元の切り替えなどで未通知の項目が大量に見つかった場合に備え、日付が 30 日より古い項目は通知せず、通知済みとして記録だけします。
+
 ## 必要要件
 
 - Node.js（`.node-version` 参照）

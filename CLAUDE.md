@@ -30,7 +30,8 @@ Node.js のバージョンは `.node-version` に従う。
 
 - `src/main.ts`: エントリーポイント。設定を読み込み `Crawler` を起動する
 - `src/config.ts`: 設定管理。`@book000/node-utils` の `ConfigFramework` で `data/config.json` を読み込む
-- `src/crawler.ts`: Change Log を native `fetch` で取得し、`date-fns` で日付をパースして差分を検知、`Discord` クラスで通知する
+- `src/change-log.ts`: Change Log の MDX（`<Update label="...">` 形式）を解析して項目（ID はタイトル、日付、URL、本文）を返す。`change-log.test.ts` と `src/__fixtures__/change-log.mdx` でテストする
+- `src/crawler.ts`: Change Log の MDX（`main` ブランチの `developers/change-log.mdx`）を native `fetch` で取得し、`src/change-log.ts` で解析した項目から未通知のものを検知して `Discord` クラスで通知する。30 日より古い項目は通知せず記録だけする
 - `src/notified.ts`: 通知済みログの永続化。既定パスは `data/notified.json`（環境変数 `NOTIFIED_PATH` で上書き可能）
 - `src/utils.ts`: ユーティリティ関数（`utils.test.ts` で単体テスト対象）
 
