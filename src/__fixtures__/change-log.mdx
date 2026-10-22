@@ -1,0 +1,116 @@
+---
+title: "Change Log"
+description: "Discover the latest updates, new features, and bug fixes on the Discord Developer Platform. To join in on the conversation, join the [Discord Developers Server](https://discord.com/invite/discord-developers)."
+rss: true
+---
+
+import {Route} from '/snippets/route.jsx'
+
+<Update label="October 14, 2026" tags={["HTTP API"]} rss={{
+    title: "OAuth2 Authorization Responses Now Include iss",
+    description: "OAuth2 redirects to your app now include an iss parameter identifying Discord as the authorization server."
+}}>
+
+    ## OAuth2 Authorization Responses Now Include `iss`
+
+    OAuth2 authorization responses that redirect to your `redirect_uri` now include an `iss` parameter set to `https://discord.com`, following [RFC 9207](https://www.rfc-editor.org/info/rfc9207). Our [authorization server metadata](https://discord.com/.well-known/oauth-authorization-server) and [OpenID configuration](https://discord.com/.well-known/openid-configuration) now also set `authorization_response_iss_parameter_supported` to `true`.
+
+    #### Developer Resources
+    - [Issuer Identification](/developers/topics/oauth2#issuer-identification)
+</Update>
+
+<Update label="October 5, 2026" tags={["Components", "Documentation"]} rss={{
+    title: "Component Embeds and Link Preview Docs",
+    description: "Websites can customize their Discord link preview with a component embed, and new Link Previews documentation covers the tags Discord reads from a page."
+  }}>
+
+  ## Component Embeds and Link Preview Docs
+
+  Websites can now customize how their links look when shared on Discord. Add a `discord:component-embed` JSON payload to your page and Discord renders the link preview using a [Components V2](/developers/components/reference) layout instead of the default preview. Component embeds are display-only, so nothing sends an interaction, and you don't need an app or a bot to use them.
+
+  Messages carrying one of these previews have a new `components` [embed type](/developers/resources/message#embed-object-embed-types), with a `components` array holding the single [Container](/developers/components/reference#container-container-structure) that makes up the embed.
+
+  We've also published Link Previews documentation covering which Open Graph, Twitter Card, and oEmbed tags Discord reads from a page when it builds a preview.
+
+  #### Developer Resources
+  - [Link Previews](/developers/link-previews/overview)
+  - [Component Embeds](/developers/link-previews/component-embeds)
+  - [Embed Types](/developers/resources/message#embed-object-embed-types)
+</Update>
+
+<Update label="October 1, 2026" tags={["Docs"]}>
+
+    This entry has no title heading.
+</Update>
+
+<Update label="Someday soon" tags={["Docs"]}>
+
+    ## Entry With Unparsable Date
+
+    The label is not a date.
+</Update>
+
+<Update label="November 20, 2025" tags={["Breaking Change"]} rss={{
+    title: "Guild Expressions and Events Permissions",
+    description: "CREATE_GUILD_EXPRESSIONS and CREATE_EVENTS permissions now available for bot developers"
+  }}>
+
+## Guild Expressions and Events Permissions now available to developers
+
+In 2023, we had introduced permission splits for guild expressions (custom emoji and stickers) and scheduled events. These changes were made to give server administrators more granular control over who can create content in their communities. [Read the change log](/developers/change-log#clarification-on-permission-splits-for-expressions-and-events).
+
+Today, we are announcing that these permissions are now available for bot developers to use and will be required for certain actions starting **February 23, 2026**.
+
+**Create Guild Expressions Permission**
+
+- The `CREATE_GUILD_EXPRESSIONS` permission (`1 << 43`) was created in July 2023 and split from `MANAGE_GUILD_EXPRESSIONS` for users in December 2023.
+- As of today, bots now have access to the `CREATE_GUILD_EXPRESSIONS` permission.
+- Starting on February 23, 2026, bots will need the `CREATE_GUILD_EXPRESSIONS` permission to create custom emoji and stickers. `MANAGE_GUILD_EXPRESSIONS` alone will no longer be sufficient.
+
+**Create Events Permission**
+
+- The `CREATE_EVENTS` permission (`1 << 44`) was created in July 2023 and split from `MANAGE_EVENTS` for users in December 2023.
+- As of today, bots now have access to the `CREATE_EVENTS` permission.
+- Starting on February 23, 2026, bots will need the `CREATE_EVENTS` permission to create scheduled events. `MANAGE_EVENTS` alone will no longer be sufficient.
+
+</Update>
+
+<Update label="November 20, 2025" tags={["Discord Social SDK"]} rss={{
+    title: "Discord Social SDK Release 1.7.13024",
+    description: "Fixed Windows default audio device selection and added Xbox GDK 240605 support"
+  }}>
+
+## Discord Social SDK Release 1.7.13024
+
+A new release of the Discord Social SDK is now available, with the following updates:
+
+## Windows
+
+- Fixed default audio device selection to once again prefer the default system audio device instead of the default communications device.
+
+## Xbox
+
+- Added support for GDK 240605 to the build.
+
+</Update>
+
+<Update label="April 03, 2025" tags={["HTTP API", "Interactions"]} rss={{
+    title: "Per-Attachment File Upload Behavior for Apps",
+    description: "Starting today, file upload limits for apps are checked per-attachment rather than per-message."
+  }}>
+  ## Per-Attachment File Upload Behavior for Apps
+
+  Starting today, file upload limits for apps are checked per-attachment rather than per-message. This change makes the app attachment behavior the same as when a user uploads multiple attachments on a single message.
+
+  - File size limits now apply to each individual attachment
+  - Previously, limits were applied to the combined size of all attachments in a message
+  - This aligns app attachment handling with user attachment behavior
+
+  The interaction payload will also include a new `attachment_size_limit` key that specifies the maximum allowed attachment size. This limit may be higher than the default attachment size limit, depending on the guild's boost status or the invoking user's Nitro status.
+
+  For more information, check out [our documentation on file uploads](/developers/reference#uploading-files).
+</Update>
+
+{/* Autogenerated Reference Links */}
+[`Activity::AddButton`]: https://discord.com/developers/docs/social-sdk/classdiscordpp_1_1Activity.html#aab07650fcff18565eb78a1e2df46627e
+[`ActivityInvite`]: https://discord.com/developers/docs/social-sdk/classdiscordpp_1_1ActivityInvite.html#af980f140c1459e1cd8f6ef3f3c07547c
