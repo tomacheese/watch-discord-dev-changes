@@ -1,24 +1,20 @@
 import { Configuration } from './config'
 import { setInterval } from 'node:timers/promises'
+import { parseChangeLog } from './change-log'
 import { Notified } from './notified'
 import { Utils } from './utils'
 import { Discord, DiscordEmbed, Logger } from '@book000/node-utils'
-import { parse, isValid } from 'date-fns'
 
-interface ChangeLogItem {
-  title: string
-  date: Date | null
-  url: string
-  text: string
-}
+/**
+ * これより古い項目は通知せず、通知済みとして記録だけする。
+ * 旧取得元の停止期間に溜まった項目が、切替時にまとめて通知されるのを防ぐ。
+ */
+const MAX_NOTIFY_AGE_DAYS = 30
+const MAX_NOTIFY_AGE_MS = MAX_NOTIFY_AGE_DAYS * 24 * 60 * 60 * 1000
 
 export class Crawler {
   private readonly url =
-    'https://raw.githubusercontent.com/discord/discord-api-docs/master/docs/Change_Log.md'
-
-  // Nov 1, 2023
-  // Oct 19, 2023
-  private readonly dateFormat = 'MMM d, yyyy'
+    'https://raw.githubusercontent.com/discord/discord-api-docs/main/developers/change-log.mdx'
 
   private config: Configuration
   private readonly controller: AbortController = new AbortController()
@@ -71,12 +67,19 @@ export class Crawler {
       return
     }
 
-    const contents = this.parseContents(body)
+    const contents = parseChangeLog(body)
+    if (contents.length === 0) {
+      logger.error('❌ No changelog entries found')
+      return
+    }
+
+    const notified = new Notified()
+    // 初回判定は、最初の記録 (notified.json の作成) より前に確定させる
+    const isFirst = notified.isFirst()
 
     // すでに通知済みのコンテンツを除外する
-    const notified = new Notified()
     const filteredItems = contents.filter(
-      (content) => !notified.isNotified(content.title)
+      (content) => !notified.isNotified(content.id)
     )
 
     if (filteredItems.length === 0) {
@@ -100,9 +103,27 @@ export class Crawler {
       return
     }
 
-    const isFirst = notified.isFirst()
+    const now = Date.now()
+    const outdatedItems = filteredItems.filter(
+      (item) =>
+        item.date !== null && now - item.date.getTime() > MAX_NOTIFY_AGE_MS
+    )
+    if (outdatedItems.length > 0) {
+      logger.info(
+        `📦 Recording ${outdatedItems.length} outdated item(s) without notification: ${outdatedItems
+          .map((item) => item.title)
+          .join(', ')}`
+      )
+      for (const item of outdatedItems) {
+        notified.add(item.id)
+      }
+    }
 
     for (const item of filteredItems) {
+      if (outdatedItems.includes(item)) {
+        continue
+      }
+
       const translatedTitle = await this.translate(item.title)
       const translatedText = await this.translate(item.text)
 
@@ -137,69 +158,10 @@ export class Crawler {
         })
       }
 
-      notified.add(item.title)
+      notified.add(item.id)
     }
 
     logger.info('✅ Done')
-  }
-
-  private parseContents(body: string): ChangeLogItem[] {
-    const lines = body.split('\n')
-
-    // changelogのコンテンツ配列
-    const contents: ChangeLogItem[] = []
-
-    // 処理中コンテンツタイトル
-    let title = null
-    // 処理中コンテンツ日付
-    let date = null
-    // 処理中コンテンツテキスト
-    const texts: string[] = []
-    for (const line of lines) {
-      // h2はタイトル
-      if (line.startsWith('## ')) {
-        // すでにタイトルがある場合は、前の内容を保存する
-        if (title) {
-          contents.push({
-            title,
-            date: this.parseDate(date),
-            url: this.getItemUrl(title),
-            text: texts.join('\n').trim(),
-          })
-        }
-
-        // 新しいタイトルを設定する
-        title = line.replace('## ', '').trim()
-        date = null
-        texts.length = 0
-        continue
-      }
-
-      // h4は日付
-      if (line.startsWith('#### ')) {
-        date = line.replace('#### ', '').trim()
-        continue
-      }
-
-      // タイトルがない場合は、スキップする
-      if (!title) {
-        continue
-      }
-
-      texts.push(line)
-    }
-
-    // 最後のコンテンツを保存する
-    if (title) {
-      contents.push({
-        title,
-        date: this.parseDate(date),
-        url: this.getItemUrl(title),
-        text: texts.join('\n').trim(),
-      })
-    }
-
-    return contents
   }
 
   private async translate(text: string): Promise<string | null> {
@@ -217,19 +179,5 @@ export class Crawler {
     }
     const unescapedText = Utils.unescape(translatedText)
     return unescapedText
-  }
-
-  private getItemUrl(title: string): string {
-    return `https://discord.com/developers/docs/change-log#${title
-      .toLowerCase()
-      .replaceAll(' ', '-')}`
-  }
-
-  private parseDate(date: string | null): Date | null {
-    if (!date) {
-      return null
-    }
-    const parsedDate = parse(date, this.dateFormat, new Date())
-    return isValid(parsedDate) ? parsedDate : null
   }
 }
