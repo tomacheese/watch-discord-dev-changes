@@ -30,7 +30,7 @@
     "@book000/eslint-config": "1.16.111",
     "@book000/node-utils": "1.25.187",
     "@types/jest": "30.0.0",
-    "@types/node": "26.6.5",
+    "@types/node": "26.6.6",
     "date-fns": "4.4.0",
     "eslint": "10.13.0",
     "eslint-config-standard": "17.1.0",
