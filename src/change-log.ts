@@ -2,18 +2,18 @@ import { Logger } from '@book000/node-utils'
 import { isValid, parse } from 'date-fns'
 
 /**
- * Change Log の 1 項目
+ * A single Change Log entry.
  */
 export interface ChangeLogItem {
-  /** 通知済み管理に使う ID。旧形式の `notified.json` との互換のためタイトルと同じ値 */
+  /** ID used for notified tracking. Kept equal to the title so existing `notified.json` files stay valid */
   id: string
-  /** 項目のタイトル (`<Update>` 内の最初の h2) */
+  /** Entry title (the first h2 inside `<Update>`) */
   title: string
-  /** `<Update>` の `label` から解釈した日付。解釈できない場合は null */
+  /** Date parsed from the `<Update>` `label`, or null if it cannot be parsed */
   date: Date | null
-  /** 公式ドキュメント上の項目のアンカー URL */
+  /** Anchor URL of the entry on the official docs site */
   url: string
-  /** タイトルより後ろの本文 (共通インデント除去済み) */
+  /** Body after the title, with the common indentation removed */
   text: string
 }
 
@@ -24,20 +24,20 @@ const UPDATE_CLOSE_PATTERN = /^\s*<\/Update>\s*$/
 const TITLE_PATTERN = /^[ \t]*## (.+)$/
 
 /**
- * 行頭の空白文字数を返す。
+ * Counts the leading whitespace characters of a line.
  *
- * @param line 対象の行
- * @returns 行頭の空白文字の文字数
+ * @param line The line to inspect
+ * @returns Number of leading whitespace characters
  */
 function countIndent(line: string): number {
   return line.length - line.trimStart().length
 }
 
 /**
- * 全行から共通インデントを取り除く。空行は無視して共通インデントを求める。
+ * Removes the common indentation from all lines. Blank lines are ignored when computing it.
  *
- * @param lines 対象の行
- * @returns 共通インデントを取り除いた行
+ * @param lines The lines to dedent
+ * @returns The lines without the common indentation
  */
 function dedent(lines: string[]): string[] {
   let minIndent = Infinity
@@ -51,10 +51,10 @@ function dedent(lines: string[]): string[] {
 }
 
 /**
- * 本文の行のうち、最初の h2 の位置とタイトルを探す。
+ * Finds the first h2 in the body and returns its position and title.
  *
- * @param lines 開始タグの次の行から `</Update>` の前までの行
- * @returns 最初の h2 の行番号 (0 始まり) とタイトル。h2 が無い場合は null
+ * @param lines Lines from the one after the opening tag up to just before `</Update>`
+ * @returns 0-based line index and title of the first h2, or null if there is none
  */
 function findTitle(lines: string[]): { index: number; title: string } | null {
   for (const [index, line] of lines.entries()) {
@@ -67,10 +67,10 @@ function findTitle(lines: string[]): { index: number; title: string } | null {
 }
 
 /**
- * `label` から公式ドキュメント上のアンカー付き URL を作る。
+ * Builds the anchored URL on the official docs site from a `label`.
  *
- * @param label `<Update>` の `label` 属性値
- * @returns アンカー付き URL
+ * @param label The `label` attribute value of `<Update>`
+ * @returns The anchored URL
  */
 function getItemUrl(label: string): string {
   const slug = label.toLowerCase().replaceAll(',', '').replaceAll(/\s+/g, '-')
@@ -78,10 +78,10 @@ function getItemUrl(label: string): string {
 }
 
 /**
- * `label` を日付として解釈する。
+ * Parses a `label` as a date.
  *
- * @param label `<Update>` の `label` 属性値
- * @returns 解釈した日付。解釈できない場合は null
+ * @param label The `label` attribute value of `<Update>`
+ * @returns The parsed date, or null if it cannot be parsed
  */
 function parseLabelDate(label: string): Date | null {
   const date = parse(label, LABEL_DATE_FORMAT, new Date())
@@ -89,14 +89,14 @@ function parseLabelDate(label: string): Date | null {
 }
 
 /**
- * Change Log の MDX から項目を取り出す。
+ * Extracts entries from the Change Log MDX.
  *
- * `<Update label="...">` から `</Update>` までを 1 項目とし、本文の最初の h2 をタイトルにする。
- * タイトルが無い項目や `label` が空の項目は警告ログを出してスキップする。
- * 閉じタグの無い項目に当たった場合は警告ログを出し、それ以降の解析を打ち切る。
+ * Each entry spans from `<Update label="...">` to `</Update>`, and the first h2 in the body is its title.
+ * Entries without a title or with an empty `label` are skipped with a warning.
+ * On an entry without a closing tag, a warning is logged and parsing stops.
  *
- * @param body Change Log の MDX 全文
- * @returns 項目の配列 (MDX 上の出現順)
+ * @param body The full Change Log MDX
+ * @returns The entries in order of appearance in the MDX
  */
 export function parseChangeLog(body: string): ChangeLogItem[] {
   const logger = Logger.configure('parseChangeLog')
@@ -112,7 +112,7 @@ export function parseChangeLog(body: string): ChangeLogItem[] {
     }
     const label = open[1]
 
-    // rss の description に ">" を含む行があるため、開始タグは ">" で終わる最初の行で閉じる
+    // The rss description attribute can contain lines with ">", so the opening tag ends at the first line that ends with ">"
     let tagEnd = index
     while (tagEnd < lines.length && !lines[tagEnd].trimEnd().endsWith('>')) {
       tagEnd++

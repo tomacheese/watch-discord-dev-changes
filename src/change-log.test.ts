@@ -9,10 +9,10 @@ const fixture = fs.readFileSync(
 )
 
 /**
- * 日付を年月日の文字列にする。
+ * Formats a date as a year-month-day string.
  *
- * @param date 対象の日付
- * @returns `YYYY-M-D` 形式の文字列。null の場合は null
+ * @param date The date to format
+ * @returns A `YYYY-M-D` string, or null if the date is null
  */
 function toYmd(date: Date | null): string | null {
   return date

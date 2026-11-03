@@ -8,15 +8,15 @@ interface GasTranslateResponse {
 
 export const Utils = {
   /**
-   * テキストをエスケープするメソッド。MarkdownおよびDiscordのフォーマットをエスケープします。
+   * Wraps Markdown and Discord formatting in `translate="no"` spans so the translator leaves it untouched.
    *
-   * @param text エスケープするテキスト。
-   * @returns エスケープされたテキスト。
+   * @param text The text to escape.
+   * @returns The escaped text.
    */
   escape(text: string): string {
     return (
       text
-        // --- markdownエスケープ ---
+        // --- Markdown escapes ---
         // <https://example.com> -> <span translate="no" data-type="url">https://example.com</span>
         // https://example.com -> <span translate="no" data-type="url">https://example.com</span>
         .replaceAll(
@@ -39,18 +39,18 @@ export const Utils = {
           /(\*{1,2})(\S+?)\1/g,
           '<span translate="no" data-type="strong-or-italic">$1</span>$2<span translate="no" data-type="strong-or-italic">$1</span>'
         )
-        // --- discordエスケープ ---
+        // --- Discord escapes ---
         // <@123456789012345678> -> <span translate="no" data-type="formatting"><@123456789012345678></span>
         // <#123456789012345678> -> <span translate="no" data-type="formatting"><#123456789012345678></span>
         // <@&123456789012345678> -> <span translate="no" data-type="formatting"><@&123456789012345678></span>
-        // <:name:123456789012345678> -> <span translate="no" data-type="formatting"><:anamet:123456789012345678></span>
+        // <:name:123456789012345678> -> <span translate="no" data-type="formatting"><:name:123456789012345678></span>
         // <a:name:123456789012345678> -> <span translate="no" data-type="formatting"><a:name:123456789012345678></span>
         // <@!123456789012345678> -> <span translate="no" data-type="formatting"><@!123456789012345678></span>
         .replaceAll(
           /<[#:@at]\S+>/g,
           '<span translate="no" data-type="formatting">$&</span>'
         )
-        // <<1234567890:customize> -> <span translate="no" data-type="formatting"><1234567890:customize></span>
+        // <1234567890:customize> -> <span translate="no" data-type="formatting"><1234567890:customize></span>
         .replaceAll(
           /<\d+:\S+>/g,
           '<span translate="no" data-type="formatting">$&</span>'
@@ -58,10 +58,10 @@ export const Utils = {
     )
   },
   /**
-   * エスケープされたテキストを元に戻すメソッド。MarkdownおよびDiscordのフォーマットを元に戻します。
+   * Reverses `escape`, restoring the Markdown and Discord formatting.
    *
-   * @param text - 元に戻すテキスト。
-   * @returns 元に戻されたテキスト。
+   * @param text - The text to unescape.
+   * @returns The unescaped text.
    */
   unescape(text: string): string {
     return (
@@ -99,7 +99,7 @@ export const Utils = {
           /<span translate="no" data-type="formatting">(<[#:@at]\S+>)<\/span>/g,
           '$1'
         )
-        // <span translate="no" data-type="formatting"><1234567890:customize></span> -> <<1234567890:customize>
+        // <span translate="no" data-type="formatting"><1234567890:customize></span> -> <1234567890:customize>
         .replaceAll(
           /<span translate="no" data-type="formatting">(<\d+:\S+>)<\/span>/g,
           '$1'
@@ -107,13 +107,13 @@ export const Utils = {
     )
   },
   /**
-   * 指定されたGoogle Apps Script URLを使用して、与えられたメッセージを一つの言語から別の言語に翻訳します。
+   * Translates a message via the given Google Apps Script URL.
    *
-   * @param gasUrl 翻訳に使用するGoogle Apps ScriptサービスのURL。
-   * @param message 翻訳対象のテキストメッセージ。
-   * @param before 元の言語の言語コード（デフォルトは英語の 'en'）。
-   * @param after 翻訳後の言語の言語コード（デフォルトは日本語の 'ja'）。
-   * @returns 翻訳されたメッセージ（文字列）。翻訳が失敗した場合は null。
+   * @param gasUrl URL of the Google Apps Script translation service.
+   * @param message The text to translate.
+   * @param before Source language code.
+   * @param after Target language code.
+   * @returns The translated message, or null if translation fails.
    */
   async translate(
     gasUrl: string,
@@ -139,7 +139,7 @@ export const Utils = {
       })
 
       if (!res.ok) {
-        logger.warn(`❌ メッセージの翻訳に失敗しました：${res.status}`)
+        logger.warn(`❌ Failed to translate message: ${res.status}`)
         return null
       }
 
@@ -147,7 +147,7 @@ export const Utils = {
       return data.response.result
     } catch (error) {
       logger.warn(
-        `❌ メッセージの翻訳中に例外が発生しました：${(error as Error).message}`
+        `❌ Exception while translating message: ${(error as Error).message}`
       )
       return null
     }
