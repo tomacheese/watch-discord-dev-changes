@@ -6,8 +6,8 @@ import { Utils } from './utils'
 import { Discord, DiscordEmbed, Logger } from '@book000/node-utils'
 
 /**
- * これより古い項目は通知せず、通知済みとして記録だけする。
- * 通知済みデータに無い古い項目が、まとめて通知されるのを防ぐ。
+ * Entries older than this are recorded as notified without being sent.
+ * Prevents a flood of notifications for old entries missing from the notified data (e.g. after switching the source).
  */
 const MAX_NOTIFY_AGE_DAYS = 30
 const MAX_NOTIFY_AGE_MS = MAX_NOTIFY_AGE_DAYS * 24 * 60 * 60 * 1000
@@ -74,10 +74,9 @@ export class Crawler {
     }
 
     const notified = new Notified()
-    // 初回判定は、最初の記録 (notified.json の作成) より前に確定させる
+    // Decide first-run before the first record is written (which creates notified.json)
     const isFirst = notified.isFirst()
 
-    // すでに通知済みのコンテンツを除外する
     const filteredItems = contents.filter(
       (content) => !notified.isNotified(content.id)
     )
@@ -138,11 +137,9 @@ export class Crawler {
         description: `\`\`\`markdown\n${item.text}\n\`\`\``,
       }
       if (translatedTitle) {
-        // 翻訳されたタイトルがある場合は、説明文の先頭に表示する
         embed.description = translatedTitle + '\n\n' + (embed.description ?? '')
       }
       if (translatedText) {
-        // 翻訳されたテキストがある場合は、フィールドに表示する
         embed.fields = [
           {
             name: 'Translated',
@@ -152,7 +149,7 @@ export class Crawler {
       }
 
       if (!isFirst) {
-        // 初回の場合はメッセージを送信しない
+        // On the first run, only record entries without sending messages
         await discord.sendMessage({
           embeds: [embed],
         })

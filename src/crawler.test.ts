@@ -27,7 +27,7 @@ const TITLE_ATTACHMENT = 'Per-Attachment File Upload Behavior for Apps'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
-/** Discord へ送信された Embed のうち、検証に使うもの */
+/** The parts of a sent Discord embed that the tests inspect */
 interface SentEmbed {
   title: string
   url: string
@@ -35,16 +35,16 @@ interface SentEmbed {
   description: string
 }
 
-/** `Discord.sendMessage` に渡されるメッセージのうち、検証に使うもの */
+/** The parts of a message passed to `Discord.sendMessage` that the tests inspect */
 interface SentMessage {
   embeds: SentEmbed[]
 }
 
 /**
- * 最小限の設定を返すスタブを作る。
+ * Creates a minimal configuration stub.
  *
- * @param discord `discord` 設定
- * @returns `Configuration` として扱えるスタブ
+ * @param discord The `discord` setting
+ * @returns A stub usable as `Configuration`
  */
 function createConfig(discord: Record<string, string>): Configuration {
   return {
@@ -64,28 +64,28 @@ describe('Crawler.run', () => {
   })
 
   /**
-   * 通知済みファイルの内容を読む。
+   * Reads the contents of the notified file.
    *
-   * @returns 通知済み ID の配列
+   * @returns The array of notified IDs
    */
   function readNotified(): string[] {
     return JSON.parse(fs.readFileSync(notifiedPath, 'utf8')) as string[]
   }
 
   /**
-   * 送信されたメッセージの Embed タイトルを送信順に返す。
+   * Returns the embed titles of the sent messages, in send order.
    *
-   * @returns Embed タイトルの配列
+   * @returns The array of embed titles
    */
   function sentTitles(): string[] {
     return sendMessage.mock.calls.map((call) => call[0].embeds[0].title)
   }
 
   /**
-   * `fetch` が返す Response を差し替える。
+   * Replaces the Response returned by `fetch`.
    *
-   * @param body レスポンスボディ
-   * @param status HTTP ステータス
+   * @param body The response body
+   * @param status The HTTP status
    */
   function mockResponse(body: string, status = 200): void {
     fetchMock.mockResolvedValue(new Response(body, { status }))

@@ -1,42 +1,15 @@
 # GitHub Copilot Instructions
 
-GitHub Copilot のコードレビュー向け指示です。このリポジトリの PR をレビューする際の観点をまとめます。
+Follow [AGENTS.md](../AGENTS.md) for the project overview, commands, architecture, conventions, and language rules. When reviewing PRs, check in particular:
 
-## プロジェクト概要
+- Credentials (Discord webhook URL, bot token, translation `gasUrl`) are not present in code, tests, logs, or commits.
+- `fetch` calls handle non-OK responses and network errors (existing code logs an English message and returns).
+- New utility functions have unit tests (`*.test.ts`) and public functions and interfaces have English JSDoc.
+- Changes to notified tracking do not cause duplicate notifications or misses. The ID is the entry title; changing its format re-notifies every entry. Entries older than 30 days are recorded without a notification, and nothing is sent on the first run.
+- `skipLibCheck` is not enabled to hide type errors, and `@book000/node-utils` features are not reimplemented.
+- Deliverables are in English; log messages are in English.
 
-Discord の Developer Change Log を定期監視し、新しい変更ログを検知して Discord（Webhook または Bot Token）へ通知する TypeScript / Node.js 製ツールです。
+Known patterns not to flag:
 
-## 技術スタック
-
-- 言語: TypeScript、実行環境: Node.js、パッケージマネージャー: pnpm
-- 実行: tsx / テスト: Jest（ts-jest）/ Lint: ESLint + Prettier
-- 主要ライブラリ: `@book000/node-utils`（設定管理・Discord 通知）、`date-fns`（日付パース）
-- HTTP 取得は Node.js 標準の `fetch` を使用（外部 HTTP クライアントは導入していない）
-
-## レビュー時の重点確認事項
-
-- 認証情報（Discord Webhook URL・Bot Token）がコード・テスト・ログ・コミットに混入していないか。混入があれば必ず指摘する
-- `data/config.json` や環境変数から読み込む機密値がリポジトリに含まれていないか
-- `fetch` 呼び出しにレスポンス status やネットワーク例外のエラーハンドリングがあるか（既存コードは失敗時に英語でログ出力する方針）
-- 新規のユーティリティ関数に対応する単体テスト（`*.test.ts`）が追加されているか
-- 公開関数・インターフェースに日本語 JSDoc があるか
-- 通知済み管理（`data/notified.json`）のロジック変更で、重複通知や取りこぼしを招いていないか
-  - 通知済みの ID は Change Log 項目のタイトル。ID の形式を変えると既存の `notified.json` が無効になり、全件が再通知される
-  - 日付が 30 日より古い項目は、通知せず記録だけする（取得元の切り替え時の大量通知を防ぐため）
-
-## コーディング規約（レビュー基準）
-
-- TypeScript の `skipLibCheck` を有効化して型エラーを回避していないか
-- 命名: 変数・関数はキャメルケース、クラス・インターフェースはパスカルケース
-- エラーメッセージ・ログ出力は英語。先頭に絵文字を使う場合は既存の `❌` に統一されているか
-- `@book000/node-utils` が提供する機能の自前再実装になっていないか
-
-## コミット・PR 規約
-
-- [Conventional Commits](https://www.conventionalcommits.org/) 形式（`<type>(<scope>): <description>`）で、description は日本語
-- 日本語と英数字の間には半角スペースを入れる
-
-## フラグ不要な既知パターン
-
-- `data/config.json` / `data/notified.json` は実行時に生成されるファイルであり、リポジトリに存在しないことは正常
-- 依存パッケージの更新 PR（`chore(deps):`）は Renovate による自動更新であり、レビュー観点は差分の妥当性に限る
+- `data/config.json` and `data/notified.json` are created at runtime and absent from the repository.
+- `chore(deps):` PRs are automated Renovate updates; review only the validity of the diff.

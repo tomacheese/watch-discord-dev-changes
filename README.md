@@ -1,36 +1,37 @@
 # watch-discord-dev-changes
 
-🔔 Discord の Developer Change Log が更新されたら Discord チャンネルに通知するツールです。
+🔔 Notifies a Discord channel when the Discord Developer Change Log is updated.
 
-## 機能
+## Features
 
-- [Discord Developer Change Log](https://discord.com/developers/docs/change-log) を定期的に監視
-- 新しい変更ログが追加されたら Discord に通知
-- 既に通知した変更ログの重複通知を防止
+- Polls the [Discord Developer Change Log](https://discord.com/developers/docs/change-log) hourly
+- Sends a Discord notification (embed) for each new entry
+- Remembers notified entries to avoid duplicate notifications
+- Optionally adds a Japanese translation through a Google Apps Script endpoint
 
-監視対象は [discord/discord-api-docs](https://github.com/discord/discord-api-docs) の `main` ブランチにある `developers/change-log.mdx` です。通知済みの管理にはタイトルを使います。
+The source is `developers/change-log.mdx` on the `main` branch of [discord/discord-api-docs](https://github.com/discord/discord-api-docs). Notified entries are tracked by title, so the title is the entry ID.
 
-取得元の切り替えなどで未通知の項目が大量に見つかった場合に備え、日付が 30 日より古い項目は通知せず、通知済みとして記録だけします。
+- On the first run (when `notified.json` does not exist yet), all current entries are recorded as notified without sending any message.
+- Entries dated more than 30 days ago are recorded as notified without a notification, so a change of source does not cause a flood of messages.
 
-## 必要要件
+## Requirements
 
-- Node.js（`.node-version` 参照）
+- Node.js (see `.node-version`)
 - pnpm
 
-## インストール
+## Installation
 
 ```bash
-# リポジトリのクローン
 git clone https://github.com/tomacheese/watch-discord-dev-changes.git
 cd watch-discord-dev-changes
-
-# 依存関係のインストール
 pnpm install
 ```
 
-## 設定
+## Configuration
 
-`data/config.json` を作成し、Discord の通知設定を行います。
+Create `data/config.json` and configure where notifications are sent. The path can be overridden with the `CONFIG_PATH` environment variable.
+
+Using a webhook:
 
 ```json
 {
@@ -40,7 +41,7 @@ pnpm install
 }
 ```
 
-または Bot Token を使用する場合:
+Or using a bot token (both `token` and `channelId` are required):
 
 ```json
 {
@@ -51,22 +52,37 @@ pnpm install
 }
 ```
 
-## 使用方法
+If `webhookUrl` is set, it takes precedence over `token` and `channelId`.
+
+To add a translation, set the URL of a Google Apps Script translation service (optional):
+
+```json
+{
+  "discord": { "webhookUrl": "https://discord.com/api/webhooks/..." },
+  "translate": { "gasUrl": "https://script.google.com/macros/s/.../exec" }
+}
+```
+
+Notified entries are stored in `data/notified.json`. The path can be overridden with the `NOTIFIED_PATH` environment variable.
+
+## Usage
 
 ```bash
-# 実行
+# Run
 pnpm start
 
-# 開発モード（ファイル変更を監視）
+# Development mode (restarts on file changes)
 pnpm dev
 ```
 
-## Docker での実行
+## Running with Docker
+
+Put `config.json` in `./data` and start the container. `./data` is mounted at `/data`, where the image reads `config.json` and writes `notified.json`.
 
 ```bash
 docker compose up -d
 ```
 
-## ライセンス
+## License
 
-このプロジェクトは [MIT](LICENSE) ライセンスの下で公開されています。
+This project is released under the [MIT](LICENSE) license.
