@@ -1,9 +1,11 @@
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import timers from 'node:timers/promises'
 import { Discord, Logger } from '@book000/node-utils'
 import { Configuration } from './config'
 import { Crawler } from './crawler'
+import { Utils } from './utils'
 
 jest.mock('@book000/node-utils', () => ({
   ...jest.requireActual<typeof import('@book000/node-utils')>(
@@ -33,6 +35,7 @@ interface SentEmbed {
   url: string
   timestamp: string
   description: string
+  fields?: { name: string; value: string }[]
 }
 
 /** The parts of a message passed to `Discord.sendMessage` that the tests inspect */
@@ -88,7 +91,9 @@ describe('Crawler.run', () => {
    * @param status The HTTP status
    */
   function mockResponse(body: string, status = 200): void {
-    fetchMock.mockResolvedValue(new Response(body, { status }))
+    fetchMock.mockImplementation(() =>
+      Promise.resolve(new Response(body, { status }))
+    )
   }
 
   beforeEach(() => {
@@ -273,8 +278,222 @@ describe('Crawler.run', () => {
     fs.writeFileSync(notifiedPath, '[]')
     sendMessage.mockRejectedValueOnce(new Error('send failed'))
 
-    await expect(new Crawler(validConfig).run()).rejects.toThrow('send failed')
+    await expect(new Crawler(validConfig).run()).resolves.toBeUndefined()
 
     expect(readNotified()).not.toContain(TITLE_OAUTH2)
+    expect(readNotified()).toContain(TITLE_EMBEDS)
+    expect(errorLog).toHaveBeenCalledWith(
+      `❌ Failed to send changelog entry: ${TITLE_OAUTH2}`
+    )
+  })
+
+  it.each([0, 1])(
+    'continues hourly polling after a failure in cycle %i',
+    async (cycle) => {
+      fs.writeFileSync(notifiedPath, '[]')
+      const interval = jest
+        .spyOn(timers, 'setInterval')
+        .mockImplementation(async function* (): AsyncGenerator<
+          null,
+          undefined
+        > {
+          await jest.advanceTimersByTimeAsync(3_600_000)
+          yield null
+          await jest.advanceTimersByTimeAsync(3_600_000)
+          yield null
+          return undefined
+        })
+      mockResponse(
+        '<Update label="October 14, 2026">\n## Entry\nBody\n</Update>'
+      )
+      if (cycle === 1) {
+        fetchMock
+          .mockImplementationOnce(() => Promise.resolve(new Response('')))
+          .mockImplementation(() =>
+            Promise.resolve(
+              new Response(
+                '<Update label="October 14, 2026">\n## Entry\nBody\n</Update>'
+              )
+            )
+          )
+      }
+      sendMessage.mockRejectedValueOnce(
+        new Error('Discord API returned 503: {}')
+      )
+
+      await new Crawler(validConfig).start()
+
+      expect(interval).toHaveBeenCalledWith(3_600_000, null, expect.any(Object))
+      expect(fetchMock).toHaveBeenCalledTimes(3)
+      expect(sendMessage).toHaveBeenCalledTimes(2)
+      expect(readNotified()).toEqual(['Entry'])
+    }
+  )
+
+  it('waits for fractional retry_after seconds and retries the same part', async () => {
+    fs.writeFileSync(notifiedPath, '[]')
+    const wait = Promise.withResolvers<undefined>()
+    const delay = jest.spyOn(timers, 'setTimeout').mockReturnValue(wait.promise)
+    sendMessage.mockRejectedValueOnce(
+      new Error('Discord API returned 429: {"retry_after":1.25,"global":true}')
+    )
+
+    const running = new Crawler(validConfig).run()
+    await jest.advanceTimersByTimeAsync(0)
+
+    expect(delay).toHaveBeenCalledWith(1250, undefined, expect.any(Object))
+    expect(sendMessage).toHaveBeenCalledTimes(1)
+    expect(readNotified()).not.toContain(TITLE_OAUTH2)
+    wait.resolve(undefined)
+    await running
+
+    expect(sendMessage.mock.calls[0]).toEqual(sendMessage.mock.calls[1])
+    expect(readNotified()).toContain(TITLE_OAUTH2)
+  })
+
+  it.each(['webhook', 'bot'])(
+    'retries the actual node-utils %s HTTP 429 error without real network requests',
+    async (mode) => {
+      fs.writeFileSync(notifiedPath, '[]')
+      const { Discord: ActualDiscord } = jest.requireActual<
+        typeof import('@book000/node-utils')
+      >('@book000/node-utils')
+      ;(Discord as unknown as jest.Mock).mockImplementation(
+        (options: ConstructorParameters<typeof ActualDiscord>[0]) =>
+          new ActualDiscord(options)
+      )
+      const delay = jest
+        .spyOn(timers, 'setTimeout')
+        .mockResolvedValue(undefined)
+      const body =
+        '<Update label="October 14, 2026">\n## Entry\nBody\n</Update>'
+      fetchMock
+        .mockResolvedValueOnce(new Response(body))
+        .mockResolvedValueOnce(
+          Response.json({ retry_after: 0.25 }, { status: 429 })
+        )
+        .mockResolvedValueOnce(Response.json({ id: 'message-id' }))
+      const config =
+        mode === 'webhook'
+          ? validConfig
+          : createConfig({
+              token: 'test-token',
+              channelId: 'test-channel',
+            })
+
+      await new Crawler(config).run()
+
+      expect(delay).toHaveBeenCalledWith(250, undefined, expect.any(Object))
+      expect(fetchMock).toHaveBeenCalledTimes(3)
+      expect(readNotified()).toEqual(['Entry'])
+    }
+  )
+
+  it('bounds retries and retries an exhausted entry on the next poll', async () => {
+    fs.writeFileSync(notifiedPath, '[]')
+    const delay = jest.spyOn(timers, 'setTimeout').mockResolvedValue(undefined)
+    const error = new Error('Discord API returned 429: {"retry_after":2}')
+    sendMessage
+      .mockRejectedValueOnce(error)
+      .mockRejectedValueOnce(error)
+      .mockRejectedValueOnce(error)
+    const crawler = new Crawler(validConfig)
+
+    await crawler.run()
+    expect(delay).toHaveBeenCalledTimes(2)
+    expect(readNotified()).not.toContain(TITLE_OAUTH2)
+    expect(readNotified()).toContain(TITLE_EMBEDS)
+
+    await crawler.run()
+    expect(readNotified()).toContain(TITLE_OAUTH2)
+  })
+
+  it.each([
+    'Discord API returned 400: {}',
+    'Discord API returned 429: invalid JSON',
+    'Discord API returned 429: null',
+    'Discord API returned 429: {}',
+    'Discord API returned 429: {"retry_after":"2"}',
+    'Discord API returned 429: {"retry_after":-1}',
+    'Discord API returned 429: {"retry_after":1e999}',
+    'Discord API returned 429: {"retry_after":2147484}',
+  ])(
+    'defers an unretryable error without a tight loop: %s',
+    async (message) => {
+      fs.writeFileSync(notifiedPath, '[]')
+      const delay = jest
+        .spyOn(timers, 'setTimeout')
+        .mockResolvedValue(undefined)
+      sendMessage.mockRejectedValueOnce(new Error(message))
+
+      await new Crawler(validConfig).run()
+
+      expect(delay).not.toHaveBeenCalled()
+      expect(readNotified()).not.toContain(TITLE_OAUTH2)
+    }
+  )
+
+  it('stops during a rate-limit wait without recording the entry', async () => {
+    fs.writeFileSync(notifiedPath, '[]')
+    const crawler = new Crawler(validConfig)
+    jest.spyOn(timers, 'setTimeout').mockImplementation(() => {
+      crawler.stop()
+      return Promise.reject(new DOMException('Aborted', 'AbortError'))
+    })
+    sendMessage.mockRejectedValueOnce(
+      new Error('Discord API returned 429: {"retry_after":10}')
+    )
+
+    await crawler.start()
+
+    expect(sendMessage).toHaveBeenCalledTimes(1)
+    expect(readNotified()).not.toContain(TITLE_OAUTH2)
+  })
+
+  it('keeps a multipart entry pending until all original and translated parts succeed', async () => {
+    fs.writeFileSync(notifiedPath, '[]')
+    mockResponse(
+      '<Update label="October 14, 2026">\n## Entry\n' +
+        'x'.repeat(9000) +
+        '\n</Update>'
+    )
+    const config = {
+      get: (key: string) =>
+        key === 'discord'
+          ? { webhookUrl: 'https://example.invalid/webhook' }
+          : { gasUrl: 'https://example.invalid/translate' },
+    } as unknown as Configuration
+    jest
+      .spyOn(Utils, 'translate')
+      .mockImplementation((_, text) =>
+        Promise.resolve(
+          text === 'Entry' ? 'Translated title' : 't'.repeat(3000)
+        )
+      )
+    sendMessage
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new TypeError('fetch failed'))
+    const crawler = new Crawler(config)
+
+    await crawler.run()
+    expect(readNotified()).toEqual([])
+    expect(sendMessage).toHaveBeenCalledTimes(2)
+    expect(sendMessage.mock.calls[0][0].embeds[0].description).toBe(
+      'Translated title'
+    )
+
+    sendMessage.mockImplementation(() => {
+      expect(readNotified()).toEqual([])
+      return Promise.resolve(undefined)
+    })
+    await crawler.run()
+    expect(readNotified()).toEqual(['Entry'])
+    expect(sendMessage).toHaveBeenCalledTimes(6)
+    for (const [message] of sendMessage.mock.calls) {
+      expect(message.embeds).toHaveLength(1)
+      const embed = message.embeds[0]
+      expect(embed.description.length).toBeLessThanOrEqual(4096)
+      expect(embed.fields?.[0].value.length ?? 0).toBeLessThanOrEqual(1024)
+    }
   })
 })
