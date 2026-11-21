@@ -1,9 +1,10 @@
 import { Configuration } from './config'
-import { setInterval } from 'node:timers/promises'
+import { setInterval, setTimeout } from 'node:timers/promises'
 import { parseChangeLog } from './change-log'
 import { Notified } from './notified'
 import { Utils } from './utils'
 import { Discord, DiscordEmbed, Logger } from '@book000/node-utils'
+import { buildChangeLogEmbeds } from './embeds'
 
 /**
  * Entries older than this are recorded as notified without being sent.
@@ -130,35 +131,79 @@ export class Crawler {
       logger.info(`🔗 ${item.url}`)
       logger.info(`📅 ${item.date?.toISOString()}`)
 
-      const embed: DiscordEmbed = {
-        title: item.title,
-        url: item.url,
-        timestamp: item.date?.toISOString() ?? new Date().toISOString(),
-        description: `\`\`\`markdown\n${item.text}\n\`\`\``,
-      }
-      if (translatedTitle) {
-        embed.description = translatedTitle + '\n\n' + (embed.description ?? '')
-      }
-      if (translatedText) {
-        embed.fields = [
-          {
-            name: 'Translated',
-            value: `\`\`\`markdown\n${translatedText}\n\`\`\``,
-          },
-        ]
-      }
-
       if (!isFirst) {
-        // On the first run, only record entries without sending messages
-        await discord.sendMessage({
-          embeds: [embed],
-        })
+        const embeds = buildChangeLogEmbeds(
+          item,
+          translatedTitle,
+          translatedText
+        )
+        try {
+          for (const embed of embeds) {
+            await this.sendEmbed(discord, embed)
+          }
+        } catch (error) {
+          if (this.controller.signal.aborted) {
+            throw error
+          }
+          logger.error(`❌ Failed to send changelog entry: ${item.title}`)
+          continue
+        }
       }
 
       notified.add(item.id)
     }
 
     logger.info('✅ Done')
+  }
+
+  /** Retries a rate-limited part twice, respecting Discord's retry_after seconds. */
+  private async sendEmbed(
+    discord: Discord,
+    embed: DiscordEmbed
+  ): Promise<void> {
+    for (let attempt = 0; ; attempt++) {
+      this.controller.signal.throwIfAborted()
+      try {
+        await discord.sendMessage({ embeds: [embed] })
+        return
+      } catch (error) {
+        const delay = this.retryDelay(error)
+        if (delay === null || attempt >= 2) {
+          throw error
+        }
+        await setTimeout(delay, undefined, { signal: this.controller.signal })
+      }
+    }
+  }
+
+  /** Reads the JSON body retained in node-utils' HTTP 429 error message. */
+  private retryDelay(error: unknown): number | null {
+    if (!(error instanceof Error)) {
+      return null
+    }
+    const prefix = 'Discord API returned 429: '
+    if (!error.message.startsWith(prefix)) {
+      return null
+    }
+    try {
+      const body: unknown = JSON.parse(error.message.slice(prefix.length))
+      if (
+        typeof body !== 'object' ||
+        body === null ||
+        !('retry_after' in body)
+      ) {
+        return null
+      }
+      const seconds = body.retry_after
+      return typeof seconds !== 'number' ||
+        !Number.isFinite(seconds) ||
+        seconds < 0 ||
+        seconds * 1000 > 2_147_483_647
+        ? null
+        : Math.max(1, Math.ceil(seconds * 1000))
+    } catch {
+      return null
+    }
   }
 
   private async translate(text: string): Promise<string | null> {
