@@ -65,6 +65,11 @@ To add a translation, set the URL of a Google Apps Script translation service (o
 
 Notified entries are stored in `data/notified.json`. The path can be overridden with the `NOTIFIED_PATH` environment variable.
 
+The file is saved atomically (a temp file in the same directory is renamed over it), so an interrupted save leaves the previous complete file.
+If the app fails with `Failed to load notified IDs`, the file is corrupt or not an array of strings, and it is never modified or reset automatically.
+Restore it from a backup, repair the JSON, or delete it.
+Deleting it makes the next run a first run: current entries are recorded without notification, so entries published while the file was unusable are never notified.
+
 ## Usage
 
 ```bash
