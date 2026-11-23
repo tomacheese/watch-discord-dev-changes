@@ -13,6 +13,8 @@ The source is `developers/change-log.mdx` on the `main` branch of [discord/disco
 
 - On the first run (when `notified.json` does not exist yet), all current entries are recorded as notified without sending any message.
 - Entries dated more than 30 days ago are recorded as notified without a notification, so a change of source does not cause a flood of messages.
+- Failed notifications remain pending for the next hourly poll; other entries continue to be processed. HTTP 429 responses with a valid `retry_after` are retried up to twice after the specified delay.
+- Long entries and translations are split across messages within Discord's embed limits. Titles longer than 256 characters are shortened with an ellipsis, and every part links to the original entry. An entry is recorded only after all parts succeed; a later failure can cause previously sent parts to be repeated on the next poll.
 
 ## Requirements
 
